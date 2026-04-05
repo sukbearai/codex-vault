@@ -1,0 +1,19 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Obsidian
+.obsidian/
+.trash/
+
+# Agent generated configs (created by install.sh)
+vault/.claude/
+vault/.codex/
+vault/CLAUDE.md
+vault/AGENTS.md
+
+# Thinking / scratchpad
+vault/thinking/session-logs/
+
+# Node
+node_modules/

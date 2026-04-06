@@ -1,5 +1,7 @@
 # Codex-Mem
 
+[English](README.md) | [中文](README.zh-CN.md)
+
 > A knowledge vault that works with any LLM agent.
 > Your notes, your git, your data.
 

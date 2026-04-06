@@ -13,6 +13,7 @@ vault/.claude/*
 !vault/.claude/skills/
 vault/.codex/*
 !vault/.codex/hooks.json
+!vault/.codex/skills/
 vault/.codex-mem/*
 !vault/.codex-mem/hooks/
 

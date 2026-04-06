@@ -25,14 +25,22 @@ Agent: "You're working on the API redesign. Last session you decided
 
 ```bash
 # From your project directory:
-git clone https://github.com/sukbearai/codex-vault.git /tmp/codex-vault
-bash /tmp/codex-vault/plugin/install.sh   # integrated mode — installs vault + hooks into your project
+npx @suwujs/codex-vault init
 claude                                  # or: codex
 ```
 
 Fill in `vault/brain/North Star.md` with your goals, then start talking.
 
+<details>
+<summary>Alternative: install from source</summary>
+
+```bash
+git clone https://github.com/sukbearai/codex-vault.git /tmp/codex-vault
+bash /tmp/codex-vault/plugin/install.sh
+```
+
 > **Standalone mode**: run `install.sh` from inside the codex-vault repo itself to use `vault/` as the working directory.
+</details>
 
 ## How It Works
 

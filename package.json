@@ -1,0 +1,29 @@
+{
+  "name": "@suwujs/codex-vault",
+  "version": "0.1.0",
+  "description": "Persistent knowledge vault for LLM agents (Claude Code, Codex CLI)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sukbearai/codex-vault"
+  },
+  "bin": {
+    "codex-vault": "bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "plugin/",
+    "vault/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "claude-code",
+    "codex",
+    "llm",
+    "knowledge-base",
+    "obsidian",
+    "vault"
+  ]
+}

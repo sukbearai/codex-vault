@@ -175,7 +175,6 @@ See [docs/usage.md](docs/usage.md) — 7 real scenarios from first session to pr
 ## Inspired By
 
 - [llm-wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) by Karpathy — the pattern
-- [obsidian-mind](https://github.com/sukbearai/obsidian-mind) — full-featured implementation for engineer performance tracking
 
 ## License
 

@@ -6,16 +6,12 @@ Thumbs.db
 .obsidian/
 .trash/
 
-# Agent generated configs — track the template, ignore user overrides
-# The vault ships with baseline configs; install.sh may regenerate them.
+# Agent generated configs — install.sh regenerates these at install time
+# Source of truth: plugin/hooks/ and plugin/skills/
 vault/.claude/*
 !vault/.claude/settings.json
-!vault/.claude/skills/
-vault/.codex/*
-!vault/.codex/hooks.json
-!vault/.codex/skills/
-vault/.codex-vault/*
-!vault/.codex-vault/hooks/
+vault/.codex/
+vault/.codex-vault/
 
 # Thinking / scratchpad
 vault/thinking/session-logs/

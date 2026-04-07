@@ -283,16 +283,14 @@ def main():
         icon = "\U0001f504" if mode == "auto" else "\U0001f4a1"
         label = ", ".join(feedback_parts) if feedback_parts else "intent detected"
 
-        # Codex CLI: use stderr for feedback (no systemMessage rendering)
-        sys.stderr.write(f"  {icon} vault: {label}\n")
-
+        # hookSpecificOutput + additionalContext → injected into LLM context
         output = {
             "hookSpecificOutput": {
                 "hookEventName": "UserPromptSubmit",
                 "additionalContext": context
-            },
+            }
         }
-        json.dump(output, sys.stdout)
+        sys.stdout.write(json.dumps(output) + "\n")
         sys.stdout.flush()
 
     sys.exit(0)

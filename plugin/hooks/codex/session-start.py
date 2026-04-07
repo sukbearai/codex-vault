@@ -351,7 +351,7 @@ def main():
                 "additionalContext": "## Session Context\n\n(No vault found)"
             }
         }
-        json.dump(output, sys.stdout)
+        sys.stdout.write(json.dumps(output) + "\n")
         sys.exit(0)
 
     # Read hook input for session metadata
@@ -361,20 +361,15 @@ def main():
         event = {}
 
     context = _build_context(vault_dir)
-    banner = _build_banner(vault_dir)
 
-    # Codex CLI: systemMessage not rendered by TUI,
-    # use stderr for terminal visibility (best effort)
-    sys.stderr.write(banner + "\n")
-
+    # hookSpecificOutput + additionalContext → injected into LLM context
     output = {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
             "additionalContext": context
-        },
+        }
     }
-
-    json.dump(output, sys.stdout)
+    sys.stdout.write(json.dumps(output) + "\n")
     sys.stdout.flush()
     sys.exit(0)
 

@@ -63,20 +63,20 @@ git commit (persistent)
 Next session → session-start hook injects context back
 ```
 
-Three hooks power the loop:
+Hooks power the loop:
 
-| Hook | When | What |
-|------|------|------|
-| **session-start** | Agent starts | Injects North Star goals, recent git changes, active work, vault file listing |
-| **classify-message** | Every message | Detects decisions, wins, project updates — hints the agent where to file them |
-| **validate-write** | After writing `.md` | Checks frontmatter and wikilinks — catches mistakes before they stick |
+| Hook | When | What | Claude Code | Codex CLI |
+|------|------|------|-------------|-----------|
+| **session-start** | Agent starts | Injects North Star goals, recent git changes, active work, vault file listing | SessionStart | SessionStart |
+| **classify-message** | Every message | Detects decisions, wins, project updates — hints the agent where to file them | UserPromptSubmit | UserPromptSubmit |
+| **validate-write** | After writing `.md` | Checks frontmatter and wikilinks — catches mistakes before they stick | PostToolUse (Write\|Edit) | N/A (Codex only supports Bash) |
 
 ## Supported Agents
 
 | Agent | Hooks | Skills | Status |
 |-------|-------|--------|--------|
 | Claude Code | 3 hooks via `.claude/settings.json` | `/dump` `/recall` `/ingest` `/wrap-up` | Full support |
-| Codex CLI | 3 hooks via `.codex/hooks.json` | `$dump` `$recall` `$ingest` `$wrap-up` | Full support |
+| Codex CLI | 2 hooks via `.codex/hooks.json` | `$dump` `$recall` `$ingest` `$wrap-up` | Full support (PostToolUse limited to Bash by Codex) |
 | Other | Write an adapter ([docs/adding-an-agent.md](docs/adding-an-agent.md)) | Depends on agent | Community |
 
 ## Vault Structure

@@ -1,121 +1,113 @@
 #!/usr/bin/env python3
-"""Post-write validation for vault notes — Codex CLI version.
+"""PostToolUse hook for Codex CLI — Bash command validation.
 
-Checks frontmatter and wikilinks on any .md file written to the vault.
-Outputs hookSpecificOutput for Codex CLI. Feedback via stderr
-(Codex CLI does not render systemMessage).
-
-Note: Codex CLI PostToolUse only supports Bash matcher, so this script
-will only run when triggered by a Bash tool writing .md files. The
-validation logic is identical to the Claude Code version.
+Checks Bash command output for hard failures (command not found,
+permission denied, missing paths) and non-zero exit codes with
+informative output. Modeled after oh-my-codex's native PostToolUse.
 """
 import json
 import re
 import sys
-import os
-from pathlib import Path
 
 
-def _check_log_format(content):
-    """Validate log.md entry format: ## [YYYY-MM-DD] <type> | <title>"""
-    warnings = []
-    for i, line in enumerate(content.splitlines(), 1):
-        if line.startswith("## ") and not line.startswith("## ["):
-            # Heading that looks like a log entry but missing date brackets
-            if any(t in line.lower() for t in ["ingest", "session", "query", "maintenance", "decision", "archive"]):
-                warnings.append(f"Line {i}: log entry missing date format — expected `## [YYYY-MM-DD] <type> | <title>`")
-        elif line.startswith("## ["):
-            if not re.match(r"^## \[\d{4}-\d{2}-\d{2}\] \w+", line):
-                warnings.append(f"Line {i}: malformed log entry — expected `## [YYYY-MM-DD] <type> | <title>`")
-    return warnings
+HARD_FAILURE_PATTERNS = re.compile(
+    r"command not found|permission denied|no such file or directory",
+    re.IGNORECASE,
+)
+
+
+def _safe_string(value):
+    return value if isinstance(value, str) else ""
+
+
+def _safe_int(value):
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip().lstrip("-").isdigit():
+        return int(value.strip())
+    return None
+
+
+def _parse_tool_response(raw):
+    """Try to parse tool_response as JSON dict."""
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                return parsed
+        except (ValueError, TypeError):
+            pass
+    return None
 
 
 def main():
     try:
-        input_data = json.load(sys.stdin)
+        payload = json.load(sys.stdin)
     except (ValueError, EOFError, OSError):
         sys.exit(0)
 
-    tool_input = input_data.get("tool_input")
-    if not isinstance(tool_input, dict):
+    tool_name = _safe_string(payload.get("tool_name", "")).strip()
+    if tool_name != "Bash":
         sys.exit(0)
 
-    file_path = tool_input.get("file_path", "")
-    if not isinstance(file_path, str) or not file_path:
+    # Extract command and response
+    tool_input = payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {}
+    command = _safe_string(tool_input.get("command", "")).strip()
+
+    raw_response = payload.get("tool_response")
+    parsed = _parse_tool_response(raw_response)
+
+    exit_code = None
+    stdout_text = ""
+    stderr_text = ""
+
+    if parsed:
+        exit_code = _safe_int(parsed.get("exit_code")) or _safe_int(parsed.get("exitCode"))
+        stdout_text = _safe_string(parsed.get("stdout", "")).strip()
+        stderr_text = _safe_string(parsed.get("stderr", "")).strip()
+    else:
+        stdout_text = _safe_string(raw_response).strip()
+
+    combined = f"{stderr_text}\n{stdout_text}".strip()
+    if not combined:
         sys.exit(0)
 
-    if not file_path.endswith(".md"):
-        sys.exit(0)
-
-    normalized = file_path.replace("\\", "/")
-    basename = os.path.basename(normalized)
-
-    # Skip non-vault files
-    skip_names = {"README.md", "CHANGELOG.md", "CONTRIBUTING.md", "CLAUDE.md", "AGENTS.md", "LICENSE"}
-    if basename in skip_names:
-        sys.exit(0)
-    if basename.startswith("README.") and basename.endswith(".md"):
-        sys.exit(0)
-
-    skip_paths = [".claude/", ".codex/", ".codex-vault/", ".mind/", "templates/", "thinking/", "node_modules/", "plugin/", "docs/"]
-    if any(skip in normalized for skip in skip_paths):
-        sys.exit(0)
-
-    warnings = []
-
-    try:
-        content = Path(file_path).read_text(encoding="utf-8")
-
-        if not content.startswith("---"):
-            warnings.append("Missing YAML frontmatter")
-        else:
-            parts = content.split("---", 2)
-            if len(parts) >= 3:
-                fm = parts[1]
-                if "date:" not in fm and basename != "log.md":
-                    warnings.append("Missing `date` in frontmatter")
-                if "tags:" not in fm:
-                    warnings.append("Missing `tags` in frontmatter")
-                if "description:" not in fm:
-                    warnings.append("Missing `description` in frontmatter (~150 chars)")
-
-        if len(content) > 300 and "[[" not in content:
-            warnings.append("No [[wikilinks]] found — every note should link to at least one other note")
-
-        # Check for unfilled template placeholders
-        placeholders = re.findall(r"\{\{[^}]+\}\}", content)
-        if placeholders:
-            examples = ", ".join(placeholders[:3])
-            warnings.append(f"Unfilled template placeholders found: {examples}")
-
-        # Validate log.md format
-        if basename == "log.md":
-            log_warnings = _check_log_format(content)
-            warnings.extend(log_warnings)
-
-    except Exception:
-        sys.exit(0)
-
-    if warnings:
-        hint_list = "\n".join(f"  - {w}" for w in warnings)
-        count = len(warnings)
-        first = warnings[0]
-        if count == 1:
-            feedback = f"\u26a0\ufe0f  vault: {basename} — {first}"
-        else:
-            feedback = f"\u26a0\ufe0f  vault: {basename} — {first} (+{count - 1} more)"
-
-        # Codex CLI: use stderr for feedback (no systemMessage rendering)
-        sys.stderr.write(f"  {feedback}\n")
-
+    # Check for hard failures
+    if HARD_FAILURE_PATTERNS.search(combined):
         output = {
+            "decision": "block",
+            "reason": "Bash output indicates a command/setup failure that should be fixed before retrying.",
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
-                "additionalContext": f"Vault warnings for `{basename}`:\n{hint_list}\nFix these before moving on."
+                "additionalContext": (
+                    "Bash reported `command not found`, `permission denied`, or a missing file/path. "
+                    "Verify the command, dependency installation, PATH, file permissions, "
+                    "and referenced paths before retrying."
+                ),
             },
         }
-        json.dump(output, sys.stdout)
+        sys.stdout.write(json.dumps(output) + "\n")
         sys.stdout.flush()
+        sys.exit(0)
+
+    # Check for non-zero exit code with informative output
+    if exit_code is not None and exit_code != 0 and len(combined) > 0:
+        output = {
+            "decision": "block",
+            "reason": "Bash command returned a non-zero exit code but produced useful output that should be reviewed before retrying.",
+            "hookSpecificOutput": {
+                "hookEventName": "PostToolUse",
+                "additionalContext": (
+                    "The Bash output appears informative despite the non-zero exit code. "
+                    "Review and report the output before retrying instead of assuming the command simply failed."
+                ),
+            },
+        }
+        sys.stdout.write(json.dumps(output) + "\n")
+        sys.stdout.flush()
+        sys.exit(0)
 
     sys.exit(0)
 

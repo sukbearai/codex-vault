@@ -95,20 +95,20 @@ git commit（持久化）
 下次 session → session-start hook 注入上下文
 ```
 
-三个 hook 驱动整个循环：
+Hook 驱动整个循环：
 
-| Hook | 触发时机 | 做什么 |
-|------|---------|--------|
-| **session-start** | Agent 启动 | 注入 North Star 目标、近期 git 变更、活跃项目、vault 文件清单 |
-| **classify-message** | 每条消息 | 检测决策、成果、项目更新 — 提示 agent 该归档到哪里 |
-| **validate-write** | 写 `.md` 后 | 检查 frontmatter 和 wikilinks — 在落盘前纠错 |
+| Hook | 触发时机 | 做什么 | Claude Code | Codex CLI |
+|------|---------|--------|-------------|-----------|
+| **session-start** | Agent 启动 | 注入 North Star 目标、近期 git 变更、活跃项目、vault 文件清单 | SessionStart | SessionStart |
+| **classify-message** | 每条消息 | 检测决策、成果、项目更新 — 提示 agent 该归档到哪里 | UserPromptSubmit | UserPromptSubmit |
+| **validate-write** | 写 `.md` 后 | 检查 frontmatter 和 wikilinks — 在落盘前纠错 | PostToolUse (Write\|Edit) | 不支持（Codex 仅支持 Bash） |
 
 ## 支持的 Agent
 
 | Agent | Hooks | Skills | 状态 |
 |-------|-------|--------|------|
 | Claude Code | `.claude/settings.json` 3 hooks | `/dump` `/recall` `/ingest` `/wrap-up` | 完整支持 |
-| Codex CLI | `.codex/hooks.json` 3 hooks | `$dump` `$recall` `$ingest` `$wrap-up` | 完整支持 |
+| Codex CLI | `.codex/hooks.json` 2 hooks | `$dump` `$recall` `$ingest` `$wrap-up` | 完整支持（PostToolUse 受 Codex 限制仅支持 Bash） |
 | 其他 | 写适配器（[指南](docs/adding-an-agent.md)） | 取决于 agent | 社区贡献 |
 
 ## Vault 结构

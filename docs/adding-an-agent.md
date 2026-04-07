@@ -12,13 +12,17 @@ Codex-Vault is agent-agnostic. The `plugin/` directory contains shared hooks and
 
 Codex-Vault uses 3 lifecycle events. Map them to your agent's equivalent:
 
-| Codex-Vault Event | When | Script |
-|-----------|------|--------|
-| SessionStart | Agent starts or resumes | `python3 plugin/hooks/session-start.py` |
-| UserPromptSubmit | User sends a message | `python3 plugin/hooks/classify-message.py` |
-| PostToolUse (Write/Edit) | Agent writes a file | `python3 plugin/hooks/validate-write.py` |
+| Codex-Vault Event | When | Claude Code Script | Codex CLI Script |
+|-----------|------|--------|--------|
+| SessionStart | Agent starts or resumes | `plugin/hooks/claude/session-start.py` | `plugin/hooks/codex/session-start.py` |
+| UserPromptSubmit | User sends a message | `plugin/hooks/claude/classify-message.py` | `plugin/hooks/codex/classify-message.py` |
+| PostToolUse (Write/Edit) | Agent writes a file | `plugin/hooks/claude/validate-write.py` | *(not supported — Codex only fires PostToolUse for Bash)* |
 
-All scripts read JSON from stdin and output JSON to stdout. The input/output schemas follow the Claude Code hook protocol, which Codex CLI also supports.
+Each agent has its own hook scripts under `plugin/hooks/{claude,codex}/`. The scripts share the same core logic but differ in output format:
+- **Claude Code**: uses `systemMessage` in JSON for terminal display
+- **Codex CLI**: uses stderr for terminal feedback (Codex TUI doesn't render systemMessage)
+
+All scripts read JSON from stdin and output JSON to stdout via the `hookSpecificOutput` protocol.
 
 ### Input (stdin)
 

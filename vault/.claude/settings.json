@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .codex-vault/hooks/session-start.py",
+            "command": "python3 .codex-vault/hooks/claude/session-start.py",
             "timeout": 30
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .codex-vault/hooks/classify-message.py",
+            "command": "python3 .codex-vault/hooks/claude/classify-message.py",
             "timeout": 15
           }
         ]
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .codex-vault/hooks/validate-write.py",
+            "command": "python3 .codex-vault/hooks/claude/validate-write.py",
             "timeout": 15
           }
         ]

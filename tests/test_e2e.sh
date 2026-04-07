@@ -107,7 +107,7 @@ cd "$TEST_DIR/vault"
 # Export vars that session-start.sh expects
 export CLAUDE_PROJECT_DIR="$TEST_DIR/vault"
 
-OUTPUT=$(bash ../plugin/hooks/session-start.sh 2>&1)
+OUTPUT=$(python3 ../plugin/hooks/claude/session-start.py 2>&1)
 
 # Check sections exist
 for section in "### Date" "### North Star" "### Recent Changes" "### Recent Operations" "### Active Work" "### Vault Files"; do
@@ -148,7 +148,7 @@ echo "--- 3. Classify Message Hook ---"
 cd "$TEST_DIR"
 
 # Test DECISION signal
-OUT=$(echo '{"prompt":"we decided to use PostgreSQL"}' | python3 plugin/hooks/classify-message.py)
+OUT=$(echo '{"prompt":"we decided to use PostgreSQL"}' | python3 plugin/hooks/claude/classify-message.py)
 if echo "$OUT" | grep -q "DECISION"; then
   pass "classify: DECISION signal triggers"
 else
@@ -156,7 +156,7 @@ else
 fi
 
 # Test WIN signal
-OUT=$(echo '{"prompt":"kudos to the team, great feedback from users"}' | python3 plugin/hooks/classify-message.py)
+OUT=$(echo '{"prompt":"kudos to the team, great feedback from users"}' | python3 plugin/hooks/claude/classify-message.py)
 if echo "$OUT" | grep -q "WIN"; then
   pass "classify: WIN signal triggers"
 else
@@ -164,7 +164,7 @@ else
 fi
 
 # Test PROJECT UPDATE signal
-OUT=$(echo '{"prompt":"sprint milestone reached"}' | python3 plugin/hooks/classify-message.py)
+OUT=$(echo '{"prompt":"sprint milestone reached"}' | python3 plugin/hooks/claude/classify-message.py)
 if echo "$OUT" | grep -q "PROJECT UPDATE"; then
   pass "classify: PROJECT UPDATE signal triggers"
 else
@@ -172,7 +172,7 @@ else
 fi
 
 # Test QUERY signal
-OUT=$(echo '{"prompt":"how does the auth system work?"}' | python3 plugin/hooks/classify-message.py)
+OUT=$(echo '{"prompt":"how does the auth system work?"}' | python3 plugin/hooks/claude/classify-message.py)
 if echo "$OUT" | grep -q "QUERY"; then
   pass "classify: QUERY signal triggers"
 else
@@ -180,7 +180,7 @@ else
 fi
 
 # Test INGEST signal
-OUT=$(echo '{"prompt":"ingest this article about databases"}' | python3 plugin/hooks/classify-message.py)
+OUT=$(echo '{"prompt":"ingest this article about databases"}' | python3 plugin/hooks/claude/classify-message.py)
 if echo "$OUT" | grep -q "INGEST"; then
   pass "classify: INGEST signal triggers"
 else
@@ -188,7 +188,7 @@ else
 fi
 
 # Test hints suggest skills, not auto-execution
-OUT=$(echo '{"prompt":"we decided to use PostgreSQL"}' | python3 plugin/hooks/classify-message.py)
+OUT=$(echo '{"prompt":"we decided to use PostgreSQL"}' | python3 plugin/hooks/claude/classify-message.py)
 if echo "$OUT" | grep -q "suggest the user run /dump"; then
   pass "classify: DECISION hint points to /dump skill"
 else
@@ -201,7 +201,7 @@ else
 fi
 
 # Test no false positive on normal message
-OUT=$(echo '{"prompt":"fix the typo in line 42"}' | python3 plugin/hooks/classify-message.py)
+OUT=$(echo '{"prompt":"fix the typo in line 42"}' | python3 plugin/hooks/claude/classify-message.py)
 if [ -z "$OUT" ]; then
   pass "classify: no false positive on normal message"
 else
@@ -209,14 +209,14 @@ else
 fi
 
 # Test empty/malformed input
-OUT=$(echo '{}' | python3 plugin/hooks/classify-message.py 2>&1); RC=$?
+OUT=$(echo '{}' | python3 plugin/hooks/claude/classify-message.py 2>&1); RC=$?
 if [ $RC -eq 0 ]; then
   pass "classify: handles empty input gracefully"
 else
   fail "classify: empty input" "exit code $RC"
 fi
 
-OUT=$(echo 'not json' | python3 plugin/hooks/classify-message.py 2>&1); RC=$?
+OUT=$(echo 'not json' | python3 plugin/hooks/claude/classify-message.py 2>&1); RC=$?
 if [ $RC -eq 0 ]; then
   pass "classify: handles malformed JSON gracefully"
 else
@@ -254,7 +254,7 @@ Testing the [[Codex-Vault]] vault system.
 - [[Key Decisions]]
 EOF
 
-OUT=$(echo "{\"tool_input\":{\"file_path\":\"$VALID_NOTE\"}}" | python3 plugin/hooks/validate-write.py)
+OUT=$(echo "{\"tool_input\":{\"file_path\":\"$VALID_NOTE\"}}" | python3 plugin/hooks/claude/validate-write.py)
 if [ -z "$OUT" ]; then
   pass "validate: valid note passes silently"
 else
@@ -272,7 +272,7 @@ Here is some padding text to make it long enough for the validator to check.
 More padding here to ensure we cross the 300 character threshold easily.
 EOF
 
-OUT=$(echo "{\"tool_input\":{\"file_path\":\"$BAD_NOTE\"}}" | python3 plugin/hooks/validate-write.py)
+OUT=$(echo "{\"tool_input\":{\"file_path\":\"$BAD_NOTE\"}}" | python3 plugin/hooks/claude/validate-write.py)
 if echo "$OUT" | grep -q "Missing YAML frontmatter"; then
   pass "validate: detects missing frontmatter"
 else
@@ -285,14 +285,14 @@ else
 fi
 
 # Test: skips non-vault files
-OUT=$(echo "{\"tool_input\":{\"file_path\":\"$TEST_DIR/vault/README.md\"}}" | python3 plugin/hooks/validate-write.py)
+OUT=$(echo "{\"tool_input\":{\"file_path\":\"$TEST_DIR/vault/README.md\"}}" | python3 plugin/hooks/claude/validate-write.py)
 if [ -z "$OUT" ]; then
   pass "validate: skips README.md"
 else
   fail "validate: skip README" "should have been skipped"
 fi
 
-OUT=$(echo "{\"tool_input\":{\"file_path\":\"$TEST_DIR/vault/templates/Work Note.md\"}}" | python3 plugin/hooks/validate-write.py)
+OUT=$(echo "{\"tool_input\":{\"file_path\":\"$TEST_DIR/vault/templates/Work Note.md\"}}" | python3 plugin/hooks/claude/validate-write.py)
 if [ -z "$OUT" ]; then
   pass "validate: skips templates/"
 else
@@ -300,7 +300,7 @@ else
 fi
 
 # Test: handles missing file_path gracefully
-OUT=$(echo '{"tool_input":{}}' | python3 plugin/hooks/validate-write.py 2>&1); RC=$?
+OUT=$(echo '{"tool_input":{}}' | python3 plugin/hooks/claude/validate-write.py 2>&1); RC=$?
 if [ $RC -eq 0 ]; then
   pass "validate: handles missing file_path"
 else
@@ -377,7 +377,7 @@ for dir in brain work sources reference thinking templates; do
 done
 
 # Check all 5 signals are in classify-message.py
-CLASSIFY="$TEST_DIR/plugin/hooks/classify-message.py"
+CLASSIFY="$TEST_DIR/plugin/hooks/claude/classify-message.py"
 for signal in DECISION WIN "PROJECT UPDATE" QUERY INGEST; do
   if grep -q "\"$signal\"" "$CLASSIFY"; then
     pass "classify: signal $signal defined"
@@ -487,7 +487,7 @@ else
 fi
 
 # 7i. session-start.sh works from project root (finds vault/ subdir)
-SS_OUTPUT=$(CLAUDE_PROJECT_DIR="$INT_DIR" bash "$INT_DIR/vault/.codex-vault/hooks/session-start.sh" 2>&1) || true
+SS_OUTPUT=$(CLAUDE_PROJECT_DIR="$INT_DIR" python3 "$INT_DIR/vault/.codex-vault/hooks/claude/session-start.py" 2>&1) || true
 if echo "$SS_OUTPUT" | grep -q "North Star"; then
   pass "integrated: session-start.sh finds vault/ from project root"
 else
@@ -518,7 +518,7 @@ tags:
 Content with [[wikilinks]] but unfilled {{author}} placeholder.
 EOF
 
-OUT=$(echo "{\"tool_input\":{\"file_path\":\"$PLACEHOLDER_NOTE\"}}" | python3 plugin/hooks/validate-write.py)
+OUT=$(echo "{\"tool_input\":{\"file_path\":\"$PLACEHOLDER_NOTE\"}}" | python3 plugin/hooks/claude/validate-write.py)
 if echo "$OUT" | grep -q "Unfilled template placeholders"; then
   pass "validate: detects unfilled {{placeholders}}"
 else
@@ -542,7 +542,7 @@ tags:
 - Created vault structure
 EOF
 
-OUT=$(echo "{\"tool_input\":{\"file_path\":\"$LOG_GOOD\"}}" | python3 plugin/hooks/validate-write.py)
+OUT=$(echo "{\"tool_input\":{\"file_path\":\"$LOG_GOOD\"}}" | python3 plugin/hooks/claude/validate-write.py)
 if [ -z "$OUT" ]; then
   pass "validate: valid log.md passes"
 else
@@ -564,7 +564,7 @@ tags:
 ## [2026-04-06] session | Good entry
 EOF
 
-OUT=$(echo "{\"tool_input\":{\"file_path\":\"$LOG_BAD\"}}" | python3 plugin/hooks/validate-write.py)
+OUT=$(echo "{\"tool_input\":{\"file_path\":\"$LOG_BAD\"}}" | python3 plugin/hooks/claude/validate-write.py)
 if echo "$OUT" | grep -q "log entry missing date format"; then
   pass "validate: detects malformed log entry"
 else
@@ -593,7 +593,7 @@ tags: [test]
 Some new content. [[Temp]]
 EOF
 
-OUT=$(echo '{"prompt":"wrap up"}' | python3 "$TEST_DIR/plugin/hooks/classify-message.py")
+OUT=$(echo '{"prompt":"wrap up"}' | python3 "$TEST_DIR/plugin/hooks/claude/classify-message.py")
 if echo "$OUT" | grep -q "SESSION END"; then
   pass "classify: SESSION END detected on wrap-up"
 else
@@ -617,7 +617,7 @@ cd "$TEST_DIR/vault"
 export CLAUDE_PROJECT_DIR="$TEST_DIR/vault"
 
 # Current vault has ~15 files — should be Tier 1 (list all)
-T1_OUTPUT=$(bash "$TEST_DIR/plugin/hooks/session-start.sh" 2>&1)
+T1_OUTPUT=$(python3 "$TEST_DIR/plugin/hooks/claude/session-start.py" 2>&1)
 if echo "$T1_OUTPUT" | grep -q "./Home.md" && ! echo "$T1_OUTPUT" | grep -q "showing summary"; then
   pass "tier1: small vault lists all files"
 else
@@ -631,7 +631,7 @@ for i in $(seq 1 15); do
 done
 git add -A && git commit -q -m "add sources for tier2 test"
 
-T2_OUTPUT=$(bash "$TEST_DIR/plugin/hooks/session-start.sh" 2>&1)
+T2_OUTPUT=$(python3 "$TEST_DIR/plugin/hooks/claude/session-start.py" 2>&1)
 if echo "$T2_OUTPUT" | grep -q "/recall"; then
   pass "tier2: medium vault mentions /recall for cold storage"
 else
@@ -649,7 +649,7 @@ for i in $(seq 16 50); do
 done
 git add -A && git commit -q -m "add sources for tier3 test"
 
-T3_OUTPUT=$(bash "$TEST_DIR/plugin/hooks/session-start.sh" 2>&1)
+T3_OUTPUT=$(python3 "$TEST_DIR/plugin/hooks/claude/session-start.py" 2>&1)
 if echo "$T3_OUTPUT" | grep -q "showing summary"; then
   pass "tier3: large vault shows folder summary"
 else
@@ -782,7 +782,7 @@ echo "--- 11. Classify Dual Mode ---"
 cd "$TEST_DIR/vault"
 
 # 11a. Default mode (no config) = suggest
-OUT=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py")
+OUT=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/claude/classify-message.py")
 if echo "$OUT" | grep -q "do NOT auto-execute"; then
   pass "dual-mode: default is suggest mode"
 else
@@ -792,7 +792,7 @@ fi
 # 11b. Auto mode with config
 mkdir -p "$TEST_DIR/vault/.codex-vault"
 echo '{"classify_mode":"auto"}' > "$TEST_DIR/vault/.codex-vault/config.json"
-OUT=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py")
+OUT=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/claude/classify-message.py")
 if echo "$OUT" | grep -q "Auto-execute"; then
   pass "dual-mode: auto mode activates with config"
 else
@@ -800,7 +800,7 @@ else
 fi
 
 # 11c. Auto mode — session end stays suggest
-OUT=$(echo '{"prompt":"wrap up"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py")
+OUT=$(echo '{"prompt":"wrap up"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/claude/classify-message.py")
 if echo "$OUT" | grep -q "SESSION END" && echo "$OUT" | grep -q "do NOT auto-execute\|suggest"; then
   pass "dual-mode: session end stays suggest in auto mode"
 else
@@ -809,7 +809,7 @@ fi
 
 # 11d. Invalid mode in config falls back to suggest
 echo '{"classify_mode":"turbo"}' > "$TEST_DIR/vault/.codex-vault/config.json"
-OUT=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py")
+OUT=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/claude/classify-message.py")
 if echo "$OUT" | grep -q "do NOT auto-execute"; then
   pass "dual-mode: invalid mode falls back to suggest"
 else
@@ -828,94 +828,97 @@ echo "--- 12. Stderr Feedback (User-Visible) ---"
 cd "$TEST_DIR/vault"
 export CLAUDE_PROJECT_DIR="$TEST_DIR/vault"
 
-# 12a. session-start banner shows in stderr
-SS_ERR=$(bash "$TEST_DIR/plugin/hooks/session-start.sh" 2>&1 1>/dev/null)
-if echo "$SS_ERR" | grep -q "Codex-Vault"; then
-  pass "stderr: session-start shows banner"
+# Claude hooks use print() (stdout) and systemMessage (JSON) for feedback.
+# Capture full output (stdout has both print lines and JSON).
+
+# 12a. session-start JSON contains systemMessage
+SS_OUT=$(python3 "$TEST_DIR/plugin/hooks/claude/session-start.py" < /dev/null 2>/dev/null)
+if echo "$SS_OUT" | grep -q "systemMessage"; then
+  pass "feedback: session-start has systemMessage"
 else
-  fail "stderr: session-start banner" "banner not found in stderr"
+  fail "feedback: session-start systemMessage" "not found in output"
 fi
 
-# 12a2. session-start shows project count
-if echo "$SS_ERR" | grep -q "active project"; then
-  pass "stderr: session-start shows project count"
+# 12a2. session-start systemMessage contains vault status
+if echo "$SS_OUT" | grep -q "Vault\|active\|notes"; then
+  pass "feedback: session-start systemMessage has status info"
 else
-  fail "stderr: session-start project count" "not found"
+  fail "feedback: session-start status" "no status info in systemMessage"
 fi
 
-# 12b. session-start banner shows goal hint when North Star is template
-if echo "$SS_ERR" | grep -q "set goals"; then
-  pass "stderr: session-start shows 'set goals' hint"
+# 12b. session-start systemMessage shows goal status
+if echo "$SS_OUT" | grep -q "goal\|no goal"; then
+  pass "feedback: session-start shows goal status"
 else
-  fail "stderr: session-start goal hint" "expected 'set goals' for template North Star"
+  fail "feedback: session-start goal" "no goal info in systemMessage"
 fi
 
-# 12c. classify stderr — DECISION signal with skill hint
-CL_ERR=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py" 2>&1 1>/dev/null)
-if echo "$CL_ERR" | grep -q "DECISION" && echo "$CL_ERR" | grep -q "/dump"; then
-  pass "stderr: classify shows DECISION → /dump"
+# 12c. classify — DECISION signal with skill hint in output
+CL_OUT=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/claude/classify-message.py" 2>/dev/null)
+if echo "$CL_OUT" | grep -q "DECISION" && echo "$CL_OUT" | grep -q "/dump"; then
+  pass "feedback: classify shows DECISION → /dump"
 else
-  fail "stderr: classify DECISION" "feedback not in stderr"
+  fail "feedback: classify DECISION" "not in output"
 fi
 
-# 12d. classify stderr — suggest mode uses 💡
-if echo "$CL_ERR" | grep -q "💡"; then
-  pass "stderr: classify suggest mode uses 💡"
+# 12d. classify — suggest mode uses 💡
+if echo "$CL_OUT" | grep -q "💡"; then
+  pass "feedback: classify suggest mode uses 💡"
 else
-  fail "stderr: classify 💡" "wrong icon for suggest mode"
+  fail "feedback: classify 💡" "wrong icon for suggest mode"
 fi
 
-# 12e. classify stderr — no signal = silent
-CL_ERR_SILENT=$(echo '{"prompt":"fix the typo"}' | python3 "$TEST_DIR/plugin/hooks/classify-message.py" 2>&1 1>/dev/null)
-if [ -z "$CL_ERR_SILENT" ]; then
-  pass "stderr: classify silent when no signal"
+# 12e. classify — no signal = no JSON output
+CL_OUT_SILENT=$(echo '{"prompt":"fix the typo"}' | python3 "$TEST_DIR/plugin/hooks/claude/classify-message.py" 2>/dev/null)
+if [ -z "$CL_OUT_SILENT" ]; then
+  pass "feedback: classify silent when no signal"
 else
-  fail "stderr: classify silent" "unexpected stderr: $CL_ERR_SILENT"
+  fail "feedback: classify silent" "unexpected output: $CL_OUT_SILENT"
 fi
 
-# 12f. classify stderr — auto mode uses 🔄
+# 12f. classify — auto mode uses 🔄
 mkdir -p "$TEST_DIR/vault/.codex-vault"
 echo '{"classify_mode":"auto"}' > "$TEST_DIR/vault/.codex-vault/config.json"
-CL_ERR_AUTO=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py" 2>&1 1>/dev/null)
-if echo "$CL_ERR_AUTO" | grep -q "🔄"; then
-  pass "stderr: classify auto mode uses 🔄"
+CL_OUT_AUTO=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/claude/classify-message.py" 2>/dev/null)
+if echo "$CL_OUT_AUTO" | grep -q "🔄"; then
+  pass "feedback: classify auto mode uses 🔄"
 else
-  fail "stderr: classify 🔄" "wrong icon for auto mode"
+  fail "feedback: classify 🔄" "wrong icon for auto mode"
 fi
 rm -rf "$TEST_DIR/vault/.codex-vault"
 
-# 12g. classify stderr — SESSION END with skill hint
-CL_ERR_END=$(echo '{"prompt":"wrap up"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py" 2>&1 1>/dev/null)
-if echo "$CL_ERR_END" | grep -q "SESSION END" && echo "$CL_ERR_END" | grep -q "/wrap-up"; then
-  pass "stderr: classify shows SESSION END → /wrap-up"
+# 12g. classify — SESSION END with skill hint
+CL_OUT_END=$(echo '{"prompt":"wrap up"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/claude/classify-message.py" 2>/dev/null)
+if echo "$CL_OUT_END" | grep -q "SESSION END" && echo "$CL_OUT_END" | grep -q "/wrap-up"; then
+  pass "feedback: classify shows SESSION END → /wrap-up"
 else
-  fail "stderr: classify SESSION END" "feedback not in stderr"
+  fail "feedback: classify SESSION END" "not in output"
 fi
 
-# 12h. validate stderr — shows first warning detail
+# 12h. validate — shows first warning detail
 BAD_NOTE="$TEST_DIR/vault/work/active/Stderr Test.md"
 mkdir -p "$TEST_DIR/vault/work/active"
 echo "No frontmatter, no wikilinks, long enough to trigger checks. Padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding." > "$BAD_NOTE"
-VW_ERR=$(echo "{\"tool_input\":{\"file_path\":\"$BAD_NOTE\"}}" | python3 "$TEST_DIR/plugin/hooks/validate-write.py" 2>&1 1>/dev/null)
-if echo "$VW_ERR" | grep -q "Missing YAML frontmatter"; then
-  pass "stderr: validate shows first warning detail"
+VW_OUT=$(echo "{\"tool_input\":{\"file_path\":\"$BAD_NOTE\"}}" | python3 "$TEST_DIR/plugin/hooks/claude/validate-write.py" 2>/dev/null)
+if echo "$VW_OUT" | grep -q "Missing YAML frontmatter"; then
+  pass "feedback: validate shows first warning detail"
 else
-  fail "stderr: validate warnings" "first warning not in stderr"
+  fail "feedback: validate warnings" "first warning not in output"
 fi
-# 12h2. validate stderr — shows "+N more" for multiple warnings
-if echo "$VW_ERR" | grep -q "+.*more"; then
-  pass "stderr: validate shows +N more for multiple warnings"
+# 12h2. validate — shows "+N more" for multiple warnings
+if echo "$VW_OUT" | grep -q "+.*more"; then
+  pass "feedback: validate shows +N more for multiple warnings"
 else
-  fail "stderr: validate +N more" "not shown for multi-warning"
+  fail "feedback: validate +N more" "not shown for multi-warning"
 fi
 rm -f "$BAD_NOTE"
 
-# 12i. validate stderr — clean note = silent
+# 12i. validate — clean note = no output
 GOOD_NOTE="$TEST_DIR/vault/work/active/Good Note.md"
 cat > "$GOOD_NOTE" << 'EOF'
 ---
 date: "2026-04-07"
-description: "Good note for stderr test"
+description: "Good note for feedback test"
 tags:
   - test
 ---
@@ -924,11 +927,11 @@ tags:
 
 Content with [[wikilinks]].
 EOF
-VW_ERR_SILENT=$(echo "{\"tool_input\":{\"file_path\":\"$GOOD_NOTE\"}}" | python3 "$TEST_DIR/plugin/hooks/validate-write.py" 2>&1 1>/dev/null)
-if [ -z "$VW_ERR_SILENT" ]; then
-  pass "stderr: validate silent on clean note"
+VW_OUT_SILENT=$(echo "{\"tool_input\":{\"file_path\":\"$GOOD_NOTE\"}}" | python3 "$TEST_DIR/plugin/hooks/claude/validate-write.py" 2>/dev/null)
+if [ -z "$VW_OUT_SILENT" ]; then
+  pass "feedback: validate silent on clean note"
 else
-  fail "stderr: validate silent" "unexpected stderr: $VW_ERR_SILENT"
+  fail "feedback: validate silent" "unexpected output: $VW_OUT_SILENT"
 fi
 rm -f "$GOOD_NOTE"
 

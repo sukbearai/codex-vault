@@ -90,13 +90,14 @@ fi
 # --- Copy hooks into vault (makes vault self-contained) ---
 
 HOOKS_DIR="$VAULT_DIR/.codex-vault/hooks"
-mkdir -p "$HOOKS_DIR"
-cp "$REPO_DIR/plugin/hooks/"* "$HOOKS_DIR/"
-chmod +x "$HOOKS_DIR/"*.sh "$HOOKS_DIR/"*.py 2>/dev/null || true
-echo "[+] Hook scripts copied to vault/.codex-vault/hooks/"
+mkdir -p "$HOOKS_DIR/claude" "$HOOKS_DIR/codex"
+cp "$REPO_DIR/plugin/hooks/claude/"* "$HOOKS_DIR/claude/"
+cp "$REPO_DIR/plugin/hooks/codex/"* "$HOOKS_DIR/codex/"
+chmod +x "$HOOKS_DIR/claude/"*.py "$HOOKS_DIR/codex/"*.py 2>/dev/null || true
+echo "[+] Hook scripts copied to vault/.codex-vault/hooks/{claude,codex}/"
 echo ""
 
-# --- Helper: merge hooks into existing settings.json ---
+# --- Helper: merge hooks into existing settings.json (Claude Code) ---
 # Uses python3 for reliable JSON manipulation.
 
 merge_hooks_json() {
@@ -134,6 +135,60 @@ if "hooks" not in existing:
     existing["hooks"] = {}
 
 # For each hook event, append entries (avoid duplicates by checking command)
+for event, entries in new_hooks.items():
+    if event not in existing["hooks"]:
+        existing["hooks"][event] = entries
+    else:
+        existing_cmds = set()
+        for rule in existing["hooks"][event]:
+            for h in rule.get("hooks", []):
+                existing_cmds.add(h.get("command", ""))
+        for entry in entries:
+            cmds = [h.get("command", "") for h in entry.get("hooks", [])]
+            if not any(c in existing_cmds for c in cmds):
+                existing["hooks"][event].append(entry)
+
+with open(target_file, "w") as f:
+    json.dump(existing, f, indent=2)
+    f.write("\n")
+PYEOF
+}
+
+# --- Helper: merge hooks into existing hooks.json (Codex CLI) ---
+# Codex CLI differences:
+#   - SessionStart matcher: "startup|resume" (no compact)
+#   - No PostToolUse hook (Codex only supports Bash matcher, not Write|Edit)
+
+merge_codex_hooks_json() {
+  local target_file="$1"
+  local hooks_rel="$2"
+
+  CVAULT_TARGET_FILE="$target_file" CVAULT_HOOKS_REL="$hooks_rel" python3 <<'PYEOF'
+import json, os
+
+target_file = os.environ["CVAULT_TARGET_FILE"]
+hooks_rel = os.environ["CVAULT_HOOKS_REL"]
+
+new_hooks = {
+    "SessionStart": [{
+        "matcher": "startup|resume",
+        "hooks": [{"type": "command", "command": f"python3 {hooks_rel}/session-start.py", "timeout": 30,
+                    "statusMessage": "\U0001f4da Codex-Vault loading..."}]
+    }],
+    "UserPromptSubmit": [{
+        "hooks": [{"type": "command", "command": f"python3 {hooks_rel}/classify-message.py", "timeout": 15}]
+    }],
+}
+
+if os.path.isfile(target_file):
+    with open(target_file) as f:
+        existing = json.load(f)
+else:
+    existing = {}
+
+if "hooks" not in existing:
+    existing["hooks"] = {}
+
 for event, entries in new_hooks.items():
     if event not in existing["hooks"]:
         existing["hooks"][event] = entries
@@ -208,7 +263,7 @@ setup_claude() {
   if [ "$MODE" = "integrated" ]; then
     # Integrated: merge hooks into project root .claude/settings.json
     mkdir -p "$CONFIG_DIR/.claude"
-    merge_hooks_json "$CONFIG_DIR/.claude/settings.json" "$HOOKS_REL"
+    merge_hooks_json "$CONFIG_DIR/.claude/settings.json" "$HOOKS_REL/claude"
     echo "  [+] .claude/settings.json (hooks merged at project root)"
 
     # Append instructions to project root CLAUDE.md
@@ -219,7 +274,7 @@ setup_claude() {
     install_skills "$CONFIG_DIR" ".claude"
   else
     # Standalone: write directly into vault/ (original behavior)
-    merge_hooks_json "$VAULT_DIR/.claude/settings.json" "$HOOKS_REL"
+    merge_hooks_json "$VAULT_DIR/.claude/settings.json" "$HOOKS_REL/claude"
     echo "  [+] .claude/settings.json (3 hooks)"
 
     # Install skills into vault/.claude/skills/
@@ -270,7 +325,7 @@ setup_codex() {
   if [ "$MODE" = "integrated" ]; then
     # Integrated: merge hooks into project root .codex/hooks.json
     mkdir -p "$CONFIG_DIR/.codex"
-    merge_hooks_json "$CONFIG_DIR/.codex/hooks.json" "$HOOKS_REL"
+    merge_codex_hooks_json "$CONFIG_DIR/.codex/hooks.json" "$HOOKS_REL/codex"
     echo "  [+] .codex/hooks.json (hooks merged at project root)"
 
     if [ "$has_claude" = true ]; then
@@ -290,8 +345,8 @@ setup_codex() {
     # Standalone: write directly into vault/ (original behavior)
     mkdir -p "$VAULT_DIR/.codex"
 
-    merge_hooks_json "$VAULT_DIR/.codex/hooks.json" "$HOOKS_REL"
-    echo "  [+] .codex/hooks.json (3 hooks)"
+    merge_codex_hooks_json "$VAULT_DIR/.codex/hooks.json" "$HOOKS_REL/codex"
+    echo "  [+] .codex/hooks.json (2 hooks)"
 
     # Enable hooks feature flag
     enable_codex_hooks "$VAULT_DIR"

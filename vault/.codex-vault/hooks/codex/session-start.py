@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Session-start hook — injects vault context into the agent's prompt.
+"""Session-start hook for Codex CLI — injects vault context into the agent's prompt.
 
-Works with any agent that supports SessionStart hooks (Claude Code, Codex CLI).
-Outputs structured JSON: additionalContext for LLM, systemMessage for terminal.
+Outputs structured JSON: additionalContext for LLM.
+Banner is written to stderr (Codex CLI does not render systemMessage).
 
 Dynamic context: adapts git log window, reads full North Star,
 shows all active work, and includes uncommitted changes.
@@ -19,8 +19,7 @@ from pathlib import Path
 
 def _find_vault_root():
     """Find vault root from CWD — check for Home.md/brain/, then vault/ subdir."""
-    cwd = os.environ.get("CLAUDE_PROJECT_DIR",
-           os.environ.get("CODEX_PROJECT_DIR", os.getcwd()))
+    cwd = os.environ.get("CODEX_PROJECT_DIR", os.getcwd())
     if os.path.isfile(os.path.join(cwd, "Home.md")) or os.path.isdir(os.path.join(cwd, "brain")):
         return cwd
     vault_sub = os.path.join(cwd, "vault")
@@ -276,7 +275,7 @@ def _c(code, text):
     return f"{code}{text}{RESET}"
 
 
-# ── Banner builder (→ systemMessage for terminal) ──────────────────────
+# ── Banner builder (→ stderr for terminal) ────────────────────────────
 
 
 def _build_banner(vault_dir):
@@ -343,23 +342,6 @@ def _build_banner(vault_dir):
 # ── Main ───────────────────────────────────────────────────────────────
 
 
-def _detect_platform():
-    """Detect whether we're running under Claude Code or Codex CLI."""
-    if os.environ.get("CLAUDE_PROJECT_DIR"):
-        return "claude"
-    if os.environ.get("CODEX_PROJECT_DIR") or os.environ.get("CODEX_HOME"):
-        return "codex"
-    # Fallback: check parent process name
-    try:
-        ppid = os.getppid()
-        cmdline = Path(f"/proc/{ppid}/cmdline").read_text() if os.path.exists(f"/proc/{ppid}/cmdline") else ""
-        if "codex" in cmdline.lower():
-            return "codex"
-    except Exception:
-        pass
-    return "claude"  # default
-
-
 def main():
     vault_dir = _find_vault_root()
     if not vault_dir:
@@ -378,9 +360,12 @@ def main():
     except Exception:
         event = {}
 
-    platform = _detect_platform()
     context = _build_context(vault_dir)
     banner = _build_banner(vault_dir)
+
+    # Codex CLI: systemMessage not rendered by TUI,
+    # use stderr for terminal visibility (best effort)
+    sys.stderr.write(banner + "\n")
 
     output = {
         "hookSpecificOutput": {
@@ -388,14 +373,6 @@ def main():
             "additionalContext": context
         },
     }
-
-    if platform == "claude":
-        # Claude Code renders systemMessage in terminal
-        output["systemMessage"] = banner
-    else:
-        # Codex CLI: systemMessage not rendered by TUI,
-        # use stderr for terminal visibility (best effort)
-        sys.stderr.write(banner + "\n")
 
     json.dump(output, sys.stdout)
     sys.stdout.flush()

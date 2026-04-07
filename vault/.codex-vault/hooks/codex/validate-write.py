@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Post-write validation for vault notes.
+"""Post-write validation for vault notes — Codex CLI version.
 
 Checks frontmatter and wikilinks on any .md file written to the vault.
-Agent-agnostic — outputs hookSpecificOutput compatible with both
-Claude Code and Codex CLI.
+Outputs hookSpecificOutput for Codex CLI. Feedback via stderr
+(Codex CLI does not render systemMessage).
+
+Note: Codex CLI PostToolUse only supports Bash matcher, so this script
+will only run when triggered by a Bash tool writing .md files. The
+validation logic is identical to the Claude Code version.
 """
 import json
 import re
@@ -97,19 +101,18 @@ def main():
         count = len(warnings)
         first = warnings[0]
         if count == 1:
-            feedback = f"⚠️  vault: {basename} — {first}"
+            feedback = f"\u26a0\ufe0f  vault: {basename} — {first}"
         else:
-            feedback = f"⚠️  vault: {basename} — {first} (+{count - 1} more)"
+            feedback = f"\u26a0\ufe0f  vault: {basename} — {first} (+{count - 1} more)"
 
-        # Hook trigger notification
-        print(f"  {feedback}")
+        # Codex CLI: use stderr for feedback (no systemMessage rendering)
+        sys.stderr.write(f"  {feedback}\n")
 
         output = {
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
                 "additionalContext": f"Vault warnings for `{basename}`:\n{hint_list}\nFix these before moving on."
             },
-            "systemMessage": feedback
         }
         json.dump(output, sys.stdout)
         sys.stdout.flush()

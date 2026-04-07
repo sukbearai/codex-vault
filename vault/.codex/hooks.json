@@ -6,9 +6,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .codex-vault/hooks/session-start.py",
+            "command": "python3 .codex-vault/hooks/codex/session-start.py",
             "timeout": 30,
-            "statusMessage": "📚 Codex-Vault loading..."
+            "statusMessage": "\ud83d\udcda Codex-Vault loading..."
           }
         ]
       }
@@ -18,19 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .codex-vault/hooks/classify-message.py",
-            "timeout": 15
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 .codex-vault/hooks/validate-write.py",
+            "command": "python3 .codex-vault/hooks/codex/classify-message.py",
             "timeout": 15
           }
         ]

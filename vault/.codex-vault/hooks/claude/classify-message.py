@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Classify user messages and inject routing hints.
+"""Classify user messages and inject routing hints — Claude Code version.
 
 Lightweight version: 5 core signals + session-end vault integrity check.
-Agent-agnostic — outputs hookSpecificOutput compatible with both
-Claude Code and Codex CLI.
+Outputs hookSpecificOutput with systemMessage for Claude Code terminal display.
 """
 import json
 import os
@@ -87,8 +86,7 @@ def _match(patterns, text):
 
 def _find_vault_root():
     """Find vault root from CWD — check for Home.md/brain/, then vault/ subdir."""
-    cwd = os.environ.get("CLAUDE_PROJECT_DIR",
-           os.environ.get("CODEX_PROJECT_DIR", os.getcwd()))
+    cwd = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
     if os.path.isfile(os.path.join(cwd, "Home.md")) or os.path.isdir(os.path.join(cwd, "brain")):
         return cwd
     vault_sub = os.path.join(cwd, "vault")
@@ -281,7 +279,7 @@ def main():
             feedback_parts.append(f"{s['name']} → {s['skill']}")
         if is_session_end(prompt):
             feedback_parts.append("SESSION END → /wrap-up")
-        icon = "🔄" if mode == "auto" else "💡"
+        icon = "\U0001f504" if mode == "auto" else "\U0001f4a1"
         label = ", ".join(feedback_parts) if feedback_parts else "intent detected"
 
         # Hook trigger notification

@@ -273,26 +273,29 @@ def main():
 
     if parts:
         context = "\n\n".join(parts)
+
+        # Build feedback label
+        matched = [s for s in SIGNALS if _match(s["patterns"], prompt.lower())]
+        feedback_parts = []
+        for s in matched:
+            feedback_parts.append(f"{s['name']} → {s['skill']}")
+        if is_session_end(prompt):
+            feedback_parts.append("SESSION END → /wrap-up")
+        icon = "🔄" if mode == "auto" else "💡"
+        label = ", ".join(feedback_parts) if feedback_parts else "intent detected"
+
+        # Hook trigger notification
+        print(f"  {icon} vault: {label}")
+
         output = {
             "hookSpecificOutput": {
                 "hookEventName": "UserPromptSubmit",
                 "additionalContext": context
-            }
+            },
+            "systemMessage": f"{icon} vault: {label}"
         }
         json.dump(output, sys.stdout)
         sys.stdout.flush()
-
-        # Visible feedback to user terminal (stderr)
-        matched = [s for s in SIGNALS if _match(s["patterns"], prompt.lower())]
-        parts = []
-        for s in matched:
-            parts.append(f"{s['name']} → {s['skill']}")
-        if is_session_end(prompt):
-            parts.append("SESSION END → /wrap-up")
-        if parts:
-            label = ", ".join(parts)
-            icon = "🔄" if mode == "auto" else "💡"
-            print(f"  {icon} vault: {label}", file=sys.stderr)
 
     sys.exit(0)
 

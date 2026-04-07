@@ -94,22 +94,25 @@ def main():
 
     if warnings:
         hint_list = "\n".join(f"  - {w}" for w in warnings)
+        count = len(warnings)
+        first = warnings[0]
+        if count == 1:
+            feedback = f"⚠️  vault: {basename} — {first}"
+        else:
+            feedback = f"⚠️  vault: {basename} — {first} (+{count - 1} more)"
+
+        # Hook trigger notification
+        print(f"  {feedback}")
+
         output = {
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
                 "additionalContext": f"Vault warnings for `{basename}`:\n{hint_list}\nFix these before moving on."
-            }
+            },
+            "systemMessage": feedback
         }
         json.dump(output, sys.stdout)
         sys.stdout.flush()
-
-        # Visible feedback to user terminal (stderr)
-        count = len(warnings)
-        first = warnings[0]
-        if count == 1:
-            print(f"  ⚠️  vault: {basename} — {first}", file=sys.stderr)
-        else:
-            print(f"  ⚠️  vault: {basename} — {first} (+{count - 1} more)", file=sys.stderr)
 
     sys.exit(0)
 

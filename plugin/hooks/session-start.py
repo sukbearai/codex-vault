@@ -355,15 +355,25 @@ def main():
         json.dump(output, sys.stdout)
         sys.exit(0)
 
+    # Read hook input for session metadata
+    try:
+        event = json.load(sys.stdin)
+    except Exception:
+        event = {}
+
     context = _build_context(vault_dir)
     banner = _build_banner(vault_dir)
+
+    # =================== Codex hook trigger notification ===================
+    print("✅ 【Hook 通知】SessionStart 已触发 — 会话启动/恢复完成")
+    print(f"   会话 ID: {event.get('sessionId', '未知')} | Matcher: {event.get('matcher', 'N/A')}")
 
     output = {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
             "additionalContext": context
         },
-        "systemMessage": banner
+        "systemMessage": "【Codex Hook】SessionStart 执行完毕 ✅\n" + banner
     }
 
     json.dump(output, sys.stdout)

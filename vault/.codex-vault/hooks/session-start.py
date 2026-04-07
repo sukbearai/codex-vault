@@ -343,6 +343,23 @@ def _build_banner(vault_dir):
 # ── Main ───────────────────────────────────────────────────────────────
 
 
+def _detect_platform():
+    """Detect whether we're running under Claude Code or Codex CLI."""
+    if os.environ.get("CLAUDE_PROJECT_DIR"):
+        return "claude"
+    if os.environ.get("CODEX_PROJECT_DIR") or os.environ.get("CODEX_HOME"):
+        return "codex"
+    # Fallback: check parent process name
+    try:
+        ppid = os.getppid()
+        cmdline = Path(f"/proc/{ppid}/cmdline").read_text() if os.path.exists(f"/proc/{ppid}/cmdline") else ""
+        if "codex" in cmdline.lower():
+            return "codex"
+    except Exception:
+        pass
+    return "claude"  # default
+
+
 def main():
     vault_dir = _find_vault_root()
     if not vault_dir:
@@ -361,20 +378,24 @@ def main():
     except Exception:
         event = {}
 
+    platform = _detect_platform()
     context = _build_context(vault_dir)
     banner = _build_banner(vault_dir)
-
-    # =================== Codex hook trigger notification ===================
-    print("✅ 【Hook 通知】SessionStart 已触发 — 会话启动/恢复完成")
-    print(f"   会话 ID: {event.get('sessionId', '未知')} | Matcher: {event.get('matcher', 'N/A')}")
 
     output = {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
             "additionalContext": context
         },
-        "systemMessage": "【Codex Hook】SessionStart 执行完毕 ✅\n" + banner
     }
+
+    if platform == "claude":
+        # Claude Code renders systemMessage in terminal
+        output["systemMessage"] = banner
+    else:
+        # Codex CLI: systemMessage not rendered by TUI,
+        # use stderr for terminal visibility (best effort)
+        sys.stderr.write(banner + "\n")
 
     json.dump(output, sys.stdout)
     sys.stdout.flush()

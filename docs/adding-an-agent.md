@@ -14,7 +14,7 @@ Codex-Vault uses 3 lifecycle events. Map them to your agent's equivalent:
 
 | Codex-Vault Event | When | Script |
 |-----------|------|--------|
-| SessionStart | Agent starts or resumes | `bash plugin/hooks/session-start.sh` |
+| SessionStart | Agent starts or resumes | `python3 plugin/hooks/session-start.py` |
 | UserPromptSubmit | User sends a message | `python3 plugin/hooks/classify-message.py` |
 | PostToolUse (Write/Edit) | Agent writes a file | `python3 plugin/hooks/validate-write.py` |
 

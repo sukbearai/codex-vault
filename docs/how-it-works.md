@@ -15,7 +15,7 @@ No databases, no embeddings, no cloud services. Just markdown files and git.
 
 The entire automation layer is 3 hook scripts:
 
-### 1. session-start.sh
+### 1. session-start.py
 
 Runs when the agent starts. Reads the vault and injects context into the agent's prompt:
 

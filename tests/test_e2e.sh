@@ -822,6 +822,108 @@ cd "$TEST_DIR"
 echo ""
 
 # ============================================================
+echo "--- 12. Stderr Feedback (User-Visible) ---"
+# ============================================================
+
+cd "$TEST_DIR/vault"
+export CLAUDE_PROJECT_DIR="$TEST_DIR/vault"
+
+# 12a. session-start banner shows in stderr
+SS_ERR=$(bash "$TEST_DIR/plugin/hooks/session-start.sh" 2>&1 1>/dev/null)
+if echo "$SS_ERR" | grep -q "Codex-Vault"; then
+  pass "stderr: session-start shows banner"
+else
+  fail "stderr: session-start banner" "banner not found in stderr"
+fi
+
+# 12b. session-start banner shows goal hint when North Star is template
+if echo "$SS_ERR" | grep -q "set goals"; then
+  pass "stderr: session-start shows 'set goals' hint"
+else
+  fail "stderr: session-start goal hint" "expected 'set goals' for template North Star"
+fi
+
+# 12c. classify stderr — DECISION signal
+CL_ERR=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py" 2>&1 1>/dev/null)
+if echo "$CL_ERR" | grep -q "DECISION detected"; then
+  pass "stderr: classify shows DECISION detected"
+else
+  fail "stderr: classify DECISION" "feedback not in stderr"
+fi
+
+# 12d. classify stderr — suggest mode uses 💡
+if echo "$CL_ERR" | grep -q "💡"; then
+  pass "stderr: classify suggest mode uses 💡"
+else
+  fail "stderr: classify 💡" "wrong icon for suggest mode"
+fi
+
+# 12e. classify stderr — no signal = silent
+CL_ERR_SILENT=$(echo '{"prompt":"fix the typo"}' | python3 "$TEST_DIR/plugin/hooks/classify-message.py" 2>&1 1>/dev/null)
+if [ -z "$CL_ERR_SILENT" ]; then
+  pass "stderr: classify silent when no signal"
+else
+  fail "stderr: classify silent" "unexpected stderr: $CL_ERR_SILENT"
+fi
+
+# 12f. classify stderr — auto mode uses 🔄
+mkdir -p "$TEST_DIR/vault/.codex-vault"
+echo '{"classify_mode":"auto"}' > "$TEST_DIR/vault/.codex-vault/config.json"
+CL_ERR_AUTO=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py" 2>&1 1>/dev/null)
+if echo "$CL_ERR_AUTO" | grep -q "🔄"; then
+  pass "stderr: classify auto mode uses 🔄"
+else
+  fail "stderr: classify 🔄" "wrong icon for auto mode"
+fi
+rm -rf "$TEST_DIR/vault/.codex-vault"
+
+# 12g. classify stderr — SESSION END
+CL_ERR_END=$(echo '{"prompt":"wrap up"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py" 2>&1 1>/dev/null)
+if echo "$CL_ERR_END" | grep -q "SESSION END detected"; then
+  pass "stderr: classify shows SESSION END detected"
+else
+  fail "stderr: classify SESSION END" "feedback not in stderr"
+fi
+
+# 12h. validate stderr — warnings shown
+BAD_NOTE="$TEST_DIR/vault/work/active/Stderr Test.md"
+mkdir -p "$TEST_DIR/vault/work/active"
+echo "No frontmatter, no wikilinks, long enough to trigger checks. Padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding." > "$BAD_NOTE"
+VW_ERR=$(echo "{\"tool_input\":{\"file_path\":\"$BAD_NOTE\"}}" | python3 "$TEST_DIR/plugin/hooks/validate-write.py" 2>&1 1>/dev/null)
+if echo "$VW_ERR" | grep -q "warning(s)"; then
+  pass "stderr: validate shows warning count"
+else
+  fail "stderr: validate warnings" "feedback not in stderr"
+fi
+rm -f "$BAD_NOTE"
+
+# 12i. validate stderr — clean note = silent
+GOOD_NOTE="$TEST_DIR/vault/work/active/Good Note.md"
+cat > "$GOOD_NOTE" << 'EOF'
+---
+date: "2026-04-07"
+description: "Good note for stderr test"
+tags:
+  - test
+---
+
+# Good Note
+
+Content with [[wikilinks]].
+EOF
+VW_ERR_SILENT=$(echo "{\"tool_input\":{\"file_path\":\"$GOOD_NOTE\"}}" | python3 "$TEST_DIR/plugin/hooks/validate-write.py" 2>&1 1>/dev/null)
+if [ -z "$VW_ERR_SILENT" ]; then
+  pass "stderr: validate silent on clean note"
+else
+  fail "stderr: validate silent" "unexpected stderr: $VW_ERR_SILENT"
+fi
+rm -f "$GOOD_NOTE"
+
+cd "$TEST_DIR"
+
+echo ""
+
+# ============================================================
 # Summary
 # ============================================================
 

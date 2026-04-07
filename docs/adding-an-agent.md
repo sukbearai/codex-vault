@@ -30,6 +30,8 @@ All scripts read JSON from stdin and output JSON to stdout. The input/output sch
 
 ### Output (stdout)
 
+All hooks output JSON with the `hookSpecificOutput` protocol:
+
 ```json
 {
   "hookSpecificOutput": {
@@ -40,6 +42,10 @@ All scripts read JSON from stdin and output JSON to stdout. The input/output sch
 ```
 
 Empty stdout or exit code 0 with no output = no hints to inject.
+
+### Stderr (user feedback)
+
+All hooks print brief status to stderr for user feedback (visible when running hooks manually or in verbose mode). This is informational only — agents may or may not pass stderr through to the terminal.
 
 ## Example: Adding a New Agent
 

@@ -5,6 +5,10 @@ set -eo pipefail
 # Injects vault context into the agent's prompt at session start.
 # Works with any agent that supports SessionStart hooks (Claude Code, Codex CLI).
 #
+# Output contract (matches claude-mem pattern):
+#   stdout → JSON with hookSpecificOutput.additionalContext (agent context)
+#   stderr → visible banner (user terminal)
+#
 # Dynamic context: adapts git log window, reads full North Star,
 # shows all active work, and includes uncommitted changes.
 
@@ -47,9 +51,13 @@ fi
   echo ""
 } >&2
 
-# --- Full context (stdout → agent) ---
-echo "## Session Context"
-echo ""
+# --- Collect context into variable ---
+CONTEXT=$(
+cat <<'CONTEXT_HEADER'
+## Session Context
+
+CONTEXT_HEADER
+
 echo "### Date"
 echo "$(date +%Y-%m-%d) ($(date +%A))"
 echo ""
@@ -160,11 +168,9 @@ _key_files() {
 }
 
 if [ "$FILE_COUNT" -le 20 ]; then
-  # Tier 1: small vault — list everything
   echo "$ALL_FILES"
 
 elif [ "$FILE_COUNT" -le 50 ]; then
-  # Tier 2: medium vault — list hot folders, summarize cold storage
   HOT_FILES=$(echo "$ALL_FILES" | grep -v -E "^\./sources/|^\./work/archive/" || true)
   COLD_COUNT=$(echo "$ALL_FILES" | grep -E "^\./sources/|^\./work/archive/" | grep -c . 2>/dev/null || echo "0")
 
@@ -177,7 +183,6 @@ elif [ "$FILE_COUNT" -le 50 ]; then
   fi
 
 elif [ "$FILE_COUNT" -le 150 ]; then
-  # Tier 3: large vault — folder summary + recent + key files
   echo "($FILE_COUNT files — showing summary)"
   echo ""
   _folder_summary
@@ -189,7 +194,6 @@ elif [ "$FILE_COUNT" -le 150 ]; then
   _key_files
 
 else
-  # Tier 4: very large vault — minimal footprint
   echo "($FILE_COUNT files — showing summary)"
   echo ""
   _folder_summary
@@ -202,3 +206,16 @@ else
   echo ""
   echo "Use /recall <topic> to search the vault."
 fi
+)
+
+# --- Output structured JSON (stdout → agent via hookSpecificOutput) ---
+python3 -c "
+import json, sys
+context = sys.stdin.read()
+json.dump({
+    'hookSpecificOutput': {
+        'hookEventName': 'SessionStart',
+        'additionalContext': context
+    }
+}, sys.stdout)
+" <<< "$CONTEXT"

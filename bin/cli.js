@@ -124,6 +124,69 @@ function runInit() {
   console.log(`\ncodex-vault v${VERSION} installed successfully.`);
 }
 
+/**
+ * Detect if this is a standalone install (inside the codex-vault repo itself).
+ * Mirrors the logic in install.sh.
+ */
+function isStandaloneMode() {
+  const cwd = process.cwd();
+  // Check if install.sh exists relative to cwd (i.e. we're inside the repo)
+  const installSh = path.join(cwd, 'plugin', 'install.sh');
+  if (!fs.existsSync(installSh)) return false;
+  // Standalone if vault/ exists at repo root alongside plugin/
+  const vaultInRepo = path.join(cwd, 'vault', 'Home.md');
+  return fs.existsSync(vaultInRepo);
+}
+
+/**
+ * Migrate vault/ → .vault/ for integrated installs.
+ * Moves user data, removes old agent configs, updates .gitignore.
+ * Returns true if migration happened.
+ */
+function migrateVaultDir() {
+  const cwd = process.cwd();
+  const oldDir = path.join(cwd, 'vault');
+  const newDir = path.join(cwd, '.vault');
+
+  // Only migrate if: old vault/ exists, .vault/ does NOT exist, and NOT standalone mode
+  if (!fs.existsSync(oldDir) || fs.existsSync(newDir) || isStandaloneMode()) {
+    return false;
+  }
+
+  // Must have Home.md to confirm it's a real vault
+  if (!fs.existsSync(path.join(oldDir, 'Home.md'))) {
+    return false;
+  }
+
+  console.log('  [*] Migrating vault/ → .vault/ ...');
+  fs.renameSync(oldDir, newDir);
+  console.log('  [+] Moved vault data to .vault/');
+
+  // Remove old agent configs (install.sh will regenerate at project root)
+  for (const sub of ['.claude', '.codex', 'CLAUDE.md', 'AGENTS.md']) {
+    const p = path.join(newDir, sub);
+    if (fs.existsSync(p)) {
+      fs.rmSync(p, { recursive: true, force: true });
+    }
+  }
+
+  // Add .vault/ to .gitignore
+  const gitignorePath = path.join(cwd, '.gitignore');
+  if (fs.existsSync(gitignorePath)) {
+    const content = fs.readFileSync(gitignorePath, 'utf8');
+    if (!content.includes('.vault/') && !content.match(/^\.vault$/m)) {
+      fs.appendFileSync(gitignorePath, '\n# Codex-Vault — local knowledge base (per-user, not shared)\n.vault/\n');
+      console.log('  [+] Added .vault/ to .gitignore');
+    }
+  } else {
+    fs.writeFileSync(gitignorePath, '# Codex-Vault — local knowledge base (per-user, not shared)\n.vault/\n');
+    console.log('  [+] Created .gitignore with .vault/');
+  }
+
+  console.log('  [+] Migration complete — vault data preserved in .vault/');
+  return true;
+}
+
 function cmdUpgrade() {
   assertBash();
 
@@ -151,7 +214,10 @@ function cmdUpgrade() {
 
   console.log(`Upgrading: v${installedVersion} → v${VERSION}`);
 
-  // Run install.sh (no backup — hooks are managed by the package, not user-modified)
+  // Migrate vault/ → .vault/ if this is an integrated install with old layout
+  const migrated = migrateVaultDir();
+
+  // Run install.sh (hooks + skills are regenerated)
   const result = spawnSync('bash', [INSTALL_SH], {
     cwd: process.cwd(),
     stdio: 'inherit',
@@ -167,8 +233,16 @@ function cmdUpgrade() {
     process.exit(result.status);
   }
 
-  // Update version file
-  fs.writeFileSync(versionFile, VERSION + '\n');
+  // Update version file at new location
+  const targetVersionFile = migrated ? defaultVersionFile() : versionFile;
+  const versionDir = path.dirname(targetVersionFile);
+  fs.mkdirSync(versionDir, { recursive: true });
+  fs.writeFileSync(targetVersionFile, VERSION + '\n');
+
+  if (migrated) {
+    console.log('\n  Note: vault/ has been renamed to .vault/ (gitignored, per-user).');
+    console.log('  Your data is preserved. Other team members need their own .vault/.');
+  }
 
   console.log(`\nUpgraded to v${VERSION} successfully.`);
 }

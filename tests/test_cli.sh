@@ -125,6 +125,37 @@ else
   fail "upgrade older" "$OUT"
 fi
 
+# --- Upgrade migration: vault/ → .vault/ ---
+echo "--- upgrade migration ---"
+# Simulate old layout: rename .vault back to vault
+mv "$DIR/.vault" "$DIR/vault"
+echo "0.7.0" > "$DIR/vault/.codex-vault/version"
+
+OUT=$(node "$CLI" upgrade 2>&1)
+if echo "$OUT" | grep -q "Migrating vault/"; then
+  pass "upgrade migrates vault/ → .vault/"
+else
+  fail "upgrade migration" "migration not triggered: $OUT"
+fi
+
+if [ -d "$DIR/.vault" ] && [ ! -d "$DIR/vault" ]; then
+  pass "upgrade moves data to .vault/"
+else
+  fail "upgrade migration data" ".vault/ not created or vault/ still exists"
+fi
+
+if [ -f "$DIR/.vault/Home.md" ]; then
+  pass "upgrade preserves vault data in .vault/"
+else
+  fail "upgrade migration data" "Home.md missing after migration"
+fi
+
+if grep -q "\.vault/" "$DIR/.gitignore" 2>/dev/null; then
+  pass "upgrade adds .vault/ to .gitignore"
+else
+  fail "upgrade .gitignore" ".vault/ not in .gitignore"
+fi
+
 # --- Uninstall ---
 echo "--- uninstall ---"
 OUT=$(node "$CLI" uninstall 2>&1)

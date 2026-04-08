@@ -730,7 +730,22 @@ else
   fail "cli: upgrade same version" "unexpected output: $CLI_OUT"
 fi
 
-# 10g. uninstall
+# 10g. upgrade migration: vault/ → .vault/
+mv "$CLI_DIR/.vault" "$CLI_DIR/vault"
+echo "0.7.0" > "$CLI_DIR/vault/.codex-vault/version"
+CLI_OUT=$(node "$CLI" upgrade 2>&1)
+if echo "$CLI_OUT" | grep -q "Migrating vault/"; then
+  pass "cli: upgrade migrates vault/ → .vault/"
+else
+  fail "cli: upgrade migration" "not triggered: $CLI_OUT"
+fi
+if [ -d "$CLI_DIR/.vault" ] && [ ! -d "$CLI_DIR/vault" ] && [ -f "$CLI_DIR/.vault/Home.md" ]; then
+  pass "cli: upgrade preserves data in .vault/"
+else
+  fail "cli: upgrade migration data" "data not preserved"
+fi
+
+# 10h. uninstall
 CLI_OUT=$(node "$CLI" uninstall 2>&1)
 if echo "$CLI_OUT" | grep -q "has been uninstalled" && [ ! -d "$CLI_DIR/.vault" ]; then
   pass "cli: uninstall removes .vault/"

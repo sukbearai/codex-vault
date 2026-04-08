@@ -2,7 +2,7 @@
 
 A structured knowledge vault maintained by an LLM agent. You write notes, maintain links, and keep indexes current. The human curates sources, directs analysis, and asks questions.
 
-**vault/ is a managed knowledge base directory.** Do not proactively read vault files — all vault interaction goes through skills (/dump, /recall, /ingest, /lint, /wrap-up). The session-start hook automatically injects the necessary context (North Star, active projects, recent changes). Only read vault files when executing a vault skill.
+**The vault (.vault/ or vault/) is a managed knowledge base directory.** Do not proactively read vault files — all vault interaction goes through skills (/dump, /recall, /ingest, /lint, /wrap-up). The session-start hook automatically injects the necessary context (North Star, active projects, recent changes). Only read vault files when executing a vault skill.
 
 ## Vault Structure
 
@@ -163,7 +163,7 @@ See the `/recall` skill for the full decision matrix.
 
 ## Vault Location
 
-The vault may live at the project root or in a `vault/` subdirectory. Use the SessionStart context to determine the actual path. All folder references above (e.g. `brain/`, `work/active/`) are relative to the vault root.
+The vault may live at the project root, in a `.vault/` subdirectory (default for integrated installs, gitignored), or in a `vault/` subdirectory (legacy/standalone). Use the SessionStart context to determine the actual path. All folder references above (e.g. `brain/`, `work/active/`) are relative to the vault root.
 
 ## Rules
 

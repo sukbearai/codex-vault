@@ -7,7 +7,7 @@ set -eo pipefail
 #
 # Two modes:
 #   Standalone — run from within the codex-vault repo (vault/ is the working directory)
-#   Integrated — run from a user's project root (vault/ becomes a subdirectory)
+#   Integrated — run from a user's project root (.vault/ becomes a subdirectory)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"

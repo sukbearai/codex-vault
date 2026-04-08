@@ -129,18 +129,7 @@ function cmdUpgrade() {
 
   console.log(`Upgrading: v${installedVersion} → v${VERSION}`);
 
-  // Backup hooks directory
-  const hooksDir = path.join(process.cwd(), 'vault', '.codex-vault', 'hooks');
-  const backupDir = path.join(process.cwd(), 'vault', '.codex-vault', `backup-${installedVersion}`, 'hooks');
-  const backupRoot = path.join(process.cwd(), 'vault', '.codex-vault', `backup-${installedVersion}`);
-
-  if (fs.existsSync(hooksDir)) {
-    fs.mkdirSync(backupDir, { recursive: true });
-    fs.cpSync(hooksDir, backupDir, { recursive: true });
-    console.log(`Hooks backed up to vault/.codex-vault/backup-${installedVersion}/hooks/`);
-  }
-
-  // Run install.sh
+  // Run install.sh (no backup — hooks are managed by the package, not user-modified)
   const result = spawnSync('bash', [INSTALL_SH], {
     cwd: process.cwd(),
     stdio: 'inherit',
@@ -148,17 +137,11 @@ function cmdUpgrade() {
 
   if (result.error) {
     console.error('Failed to run install.sh:', result.error.message);
-    if (fs.existsSync(backupRoot)) {
-      console.error(`Backup available at: vault/.codex-vault/backup-${installedVersion}/`);
-    }
     process.exit(1);
   }
 
   if (result.status !== 0) {
     console.error('install.sh exited with errors.');
-    if (fs.existsSync(backupRoot)) {
-      console.error(`Backup available at: vault/.codex-vault/backup-${installedVersion}/`);
-    }
     process.exit(result.status);
   }
 
@@ -166,9 +149,6 @@ function cmdUpgrade() {
   fs.writeFileSync(versionFile, VERSION + '\n');
 
   console.log(`\nUpgraded to v${VERSION} successfully.`);
-  if (fs.existsSync(backupRoot)) {
-    console.log(`Backup at: vault/.codex-vault/backup-${installedVersion}/`);
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -190,15 +170,12 @@ function cmdUninstall() {
   const activeVersionFile = fs.existsSync(versionFile) ? versionFile : legacyVersionFile;
   const installedVersion = fs.readFileSync(activeVersionFile, 'utf8').trim();
   console.log(`Uninstalling codex-vault v${installedVersion}...`);
-  console.log('NOTE: vault/ data (brain/, work/, sources/) is preserved.\n');
 
-  // 2. Remove vault/.codex-vault/ and legacy vault/.codex-mem/ (hooks + version + backups)
-  for (const dirName of ['.codex-vault', '.codex-mem']) {
-    const dir = path.join(cwd, 'vault', dirName);
-    if (fs.existsSync(dir)) {
-      fs.rmSync(dir, { recursive: true, force: true });
-      console.log(`  [x] Removed vault/${dirName}/`);
-    }
+  // 2. Remove entire vault/ directory (including all data)
+  const vaultDir = path.join(cwd, 'vault');
+  if (fs.existsSync(vaultDir)) {
+    fs.rmSync(vaultDir, { recursive: true, force: true });
+    console.log('  [x] Removed vault/ (all data deleted)');
   }
 
   // 3. Clean .claude/settings.json
@@ -211,7 +188,7 @@ function cmdUninstall() {
   cleanCodexConfigToml(cwd);
 
   // 6. Remove skills
-  const SKILL_NAMES = ['dump', 'ingest', 'recall', 'wrap-up'];
+  const SKILL_NAMES = ['dump', 'ingest', 'lint', 'recall', 'wrap-up'];
   removeSkills(path.join(cwd, '.claude'), '.claude', SKILL_NAMES);
   removeSkills(path.join(cwd, '.codex'), '.codex', SKILL_NAMES);
 

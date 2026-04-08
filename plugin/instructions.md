@@ -2,6 +2,8 @@
 
 A structured knowledge vault maintained by an LLM agent. You write notes, maintain links, and keep indexes current. The human curates sources, directs analysis, and asks questions.
 
+**vault/ is a managed knowledge base directory.** Do not proactively read vault files — all vault interaction goes through skills (/dump, /recall, /ingest, /lint, /wrap-up). The session-start hook automatically injects the necessary context (North Star, active projects, recent changes). Only read vault files when executing a vault skill.
+
 ## Vault Structure
 
 | Folder | Purpose |

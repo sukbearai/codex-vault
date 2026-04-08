@@ -47,7 +47,7 @@ function printHelp() {
 Usage:
   codex-vault init          Install vault into current directory (default)
   codex-vault upgrade       Upgrade existing vault to latest version
-  codex-vault uninstall     Remove vault integration (preserves vault data)
+  codex-vault uninstall     Remove vault and all integration files
   codex-vault -v, --version Print version
   codex-vault -h, --help    Print this help`);
 }
@@ -90,8 +90,9 @@ function runInit() {
   const legacyVersionFile = findLegacyVersionFile();
   if (versionFile) {
     const installed = fs.readFileSync(versionFile, 'utf8').trim();
+    const relPath = path.relative(process.cwd(), versionFile);
     console.log(`codex-vault v${installed} is already installed in this directory.`);
-    console.log('Run "codex-vault upgrade" to update, or remove .vault/.codex-vault/version to reinstall.');
+    console.log(`Run "codex-vault upgrade" to update, or remove ${relPath} to reinstall.`);
     return;
   }
   if (legacyVersionFile) {

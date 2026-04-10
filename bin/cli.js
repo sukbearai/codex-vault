@@ -453,6 +453,33 @@ function cmdDoctor() {
     }
   }
 
+  // ── Auto-commit fixes ──
+  if (fix && fixed > 0) {
+    // Stage .gitignore (may have been created/modified)
+    // git rm --cached changes are already staged
+    const gitignoreRel = path.relative(gitRoot, gitignorePath);
+    if (fs.existsSync(gitignorePath)) {
+      spawnSync('git', ['add', gitignoreRel], { cwd: gitRoot });
+    }
+
+    const commitResult = spawnSync('git', ['commit', '-m', 'chore: fix agent config git issues (codex-vault doctor)'], {
+      cwd: gitRoot,
+      encoding: 'utf8',
+    });
+
+    if (commitResult.status === 0) {
+      console.log('\n  [*] Changes committed automatically');
+    } else {
+      const stderr = (commitResult.stderr || '').trim();
+      if (stderr.includes('nothing to commit')) {
+        // No actual staged changes — fine
+      } else {
+        console.log(`\n  [!] Auto-commit failed: ${stderr}`);
+        console.log('      Run manually: git add .gitignore && git commit -m "chore: fix agent config git issues"');
+      }
+    }
+  }
+
   // ── Summary ──
   console.log('');
   if (issues === 0) {

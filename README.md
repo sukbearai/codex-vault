@@ -205,14 +205,11 @@ npx @suwujs/codex-vault doctor --fix  # Auto-fix: gitignore, untrack, migrate va
 If `.claude/`, `.codex/`, or `vault/` files are already committed and causing merge conflicts:
 
 ```bash
-# Step 1: diagnose (no changes made)
+# Diagnose (no changes made)
 npx @suwujs/codex-vault doctor
 
-# Step 2: auto-fix
+# Auto-fix and commit
 npx @suwujs/codex-vault doctor --fix
-
-# Step 3: commit the cleanup (includes both .gitignore and untracked file removals)
-git add .gitignore && git commit -m "chore: gitignore agent configs to avoid conflicts"
 ```
 
 What `doctor --fix` does:

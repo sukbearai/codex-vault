@@ -200,6 +200,25 @@ npx @suwujs/codex-vault doctor --fix  # Auto-fix: gitignore, untrack, migrate va
 # init adds .vault/, .claude/, .codex/ to .gitignore automatically — each developer gets their own local vault.
 ```
 
+### Fixing Git Conflicts in Teams
+
+If `.claude/`, `.codex/`, or `vault/` files are already committed and causing merge conflicts:
+
+```bash
+# Step 1: diagnose (no changes made)
+npx @suwujs/codex-vault doctor
+
+# Step 2: auto-fix
+npx @suwujs/codex-vault doctor --fix
+
+# Step 3: commit the cleanup
+git add .gitignore && git commit -m "chore: gitignore agent configs to avoid conflicts"
+```
+
+`doctor --fix` will: add missing `.gitignore` entries, untrack committed agent files (`git rm --cached`), migrate legacy `vault/` → `.vault/`, rename `.codex-mem/` → `.codex-vault/`, and remove stale configs. No upgrade needed — `npx` always runs the latest version.
+
+After fixing, each team member runs `npx @suwujs/codex-vault init` to regenerate their own local agent configs.
+
 ## Testing
 
 ```bash

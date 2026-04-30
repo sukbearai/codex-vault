@@ -241,8 +241,8 @@ npm run test:hooks      # Hook scripts only (33 tests)
 Publishing is handled by GitHub Actions. Add an npm automation token as the repository secret `NPM_TOKEN`, bump `package.json`, then push a matching version tag:
 
 ```bash
-git tag v0.9.9
-git push origin v0.9.9
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
 ## Requirements

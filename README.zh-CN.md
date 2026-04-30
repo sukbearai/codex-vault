@@ -225,8 +225,8 @@ npm run test:hooks      # Hook 脚本测试（33 个）
 发包由 GitHub Actions 处理。先把 npm automation token 配成仓库 secret `NPM_TOKEN`，更新 `package.json` 版本号，然后推送匹配的版本 tag：
 
 ```bash
-git tag v0.9.9
-git push origin v0.9.9
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
 ## 配置

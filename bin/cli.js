@@ -663,25 +663,48 @@ function cleanHooksJson(filePath, label) {
 }
 
 /**
- * Remove codex_hooks feature flag from .codex/config.toml.
+ * Remove Codex hooks feature flags from .codex/config.toml.
  */
 function cleanCodexConfigToml(cwd) {
   const filePath = path.join(cwd, '.codex', 'config.toml');
   if (!fs.existsSync(filePath)) return;
 
-  let content = fs.readFileSync(filePath, 'utf8');
-  const original = content;
+  const original = fs.readFileSync(filePath, 'utf8');
+  const lines = original.split(/\r?\n/);
+  const nextLines = [];
+  let inFeatures = false;
+  let featuresStart = -1;
+  let featuresHasContent = false;
 
-  // Remove lines containing codex_hooks
-  content = content.replace(/^.*codex_hooks.*\n?/gm, '');
+  for (const line of lines) {
+    const isSection = /^\s*\[[^\]]+\]\s*$/.test(line);
+    if (isSection) {
+      if (inFeatures && !featuresHasContent && featuresStart >= 0) {
+        nextLines.splice(featuresStart, 1);
+      }
+      inFeatures = /^\s*\[features\]\s*$/.test(line);
+      featuresStart = inFeatures ? nextLines.length : -1;
+      featuresHasContent = false;
+      nextLines.push(line);
+      continue;
+    }
 
-  // Remove empty [features] section (only whitespace/empty lines after header until next section or EOF)
-  content = content.replace(/^\[features\]\s*\n(?=\[|$)/gm, '');
-  // Also handle [features] at very end of file with nothing after it
-  content = content.replace(/^\[features\]\s*$/gm, '');
+    if (inFeatures && /^\s*(codex_hooks|hooks)\s*=/.test(line)) {
+      continue;
+    }
 
-  // Trim trailing whitespace
-  content = content.replace(/\n+$/, content.trim() === '' ? '' : '\n');
+    if (inFeatures && line.trim() !== '') {
+      featuresHasContent = true;
+    }
+    nextLines.push(line);
+  }
+
+  if (inFeatures && !featuresHasContent && featuresStart >= 0) {
+    nextLines.splice(featuresStart, 1);
+  }
+
+  let content = nextLines.join('\n').replace(/\n+$/, '');
+  if (content !== '') content += '\n';
 
   if (content === original) return;
 
@@ -690,7 +713,7 @@ function cleanCodexConfigToml(cwd) {
     console.log('  [x] Removed .codex/config.toml (empty after cleanup)');
   } else {
     fs.writeFileSync(filePath, content);
-    console.log('  [x] Cleaned codex_hooks from .codex/config.toml');
+    console.log('  [x] Cleaned Codex hooks feature flag from .codex/config.toml');
   }
 }
 
@@ -790,4 +813,3 @@ function isDirEmpty(dirPath) {
     return false;
   }
 }
-

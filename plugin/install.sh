@@ -360,29 +360,60 @@ setup_claude() {
   echo ""
 }
 
-# --- Helper: enable codex hooks feature flag in config.toml ---
+# --- Helper: enable Codex hooks feature flag in config.toml ---
 
 enable_codex_hooks() {
   local config_file="$1/.codex/config.toml"
   mkdir -p "$(dirname "$config_file")"
 
-  if [ -f "$config_file" ]; then
-    if grep -q "codex_hooks" "$config_file"; then
-      # Already has the flag — ensure it's true
-      sed -i.bak 's/codex_hooks *= *false/codex_hooks = true/' "$config_file"
-      rm -f "${config_file}.bak"
-    elif grep -q "\[features\]" "$config_file"; then
-      # Has [features] section but no codex_hooks — append under it
-      sed -i.bak '/\[features\]/a\
-codex_hooks = true' "$config_file"
-      rm -f "${config_file}.bak"
-    else
-      # No [features] section — append it
-      printf '\n[features]\ncodex_hooks = true\n' >> "$config_file"
-    fi
-  else
-    printf '[features]\ncodex_hooks = true\n' > "$config_file"
-  fi
+  CONFIG_FILE="$config_file" python3 <<'PYEOF'
+import os
+import re
+from pathlib import Path
+
+path = Path(os.environ["CONFIG_FILE"])
+content = path.read_text() if path.exists() else ""
+lines = content.splitlines()
+
+section_re = re.compile(r"^\s*\[[^]]+\]\s*$")
+features_re = re.compile(r"^\s*\[features\]\s*$")
+hooks_re = re.compile(r"^\s*hooks\s*=")
+deprecated_hooks_re = re.compile(r"^\s*codex_hooks\s*=")
+
+features_idx = None
+features_end = len(lines)
+for idx, line in enumerate(lines):
+    if features_re.match(line):
+        features_idx = idx
+        for end_idx in range(idx + 1, len(lines)):
+            if section_re.match(lines[end_idx]):
+                features_end = end_idx
+                break
+        break
+
+if features_idx is None:
+    if lines and lines[-1].strip():
+        lines.append("")
+    lines.extend(["[features]", "hooks = true"])
+else:
+    has_hooks = False
+    next_lines = []
+    for idx, line in enumerate(lines):
+        in_features = features_idx < idx < features_end
+        if in_features and deprecated_hooks_re.match(line):
+            continue
+        if in_features and hooks_re.match(line):
+            if not has_hooks:
+                next_lines.append("hooks = true")
+                has_hooks = True
+            continue
+        next_lines.append(line)
+    lines = next_lines
+    if not has_hooks:
+        lines.insert(features_idx + 1, "hooks = true")
+
+path.write_text("\n".join(lines).rstrip() + "\n")
+PYEOF
 
   echo "  [+] .codex/config.toml (hooks enabled)"
 }

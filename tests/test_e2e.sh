@@ -76,7 +76,7 @@ if command -v codex &>/dev/null; then
     fail "Codex CLI skills" "not found in vault/.codex/skills/"
   fi
   # Check hooks feature flag enabled
-  if [ -f "vault/.codex/config.toml" ] && grep -q "codex_hooks = true" "vault/.codex/config.toml"; then
+  if [ -f "vault/.codex/config.toml" ] && grep -q "hooks = true" "vault/.codex/config.toml"; then
     pass "Codex CLI hooks feature flag enabled"
   else
     fail "Codex CLI config.toml" "hooks feature flag not set"
